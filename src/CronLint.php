@@ -9,8 +9,6 @@ use PHPCensor\Model\BuildError;
 use PHPCensor\Plugin;
 use PHPCensor\ZeroConfigPluginInterface;
 
-use hollodotme\CrontabValidator\CrontabValidator;
-
 /**
  * Crontab Linter.
  *
@@ -49,8 +47,6 @@ class CronLint extends Plugin implements ZeroConfigPluginInterface
         if (isset($options['files']) && is_array($options['files'])) {
             $this->files = $options['files'];
         }
-
-        $this->validator = new CrontabValidator();
     }
 
     /**
@@ -69,30 +65,46 @@ class CronLint extends Plugin implements ZeroConfigPluginInterface
         // $this->builder->logExecOutput(false);
         //
 
-        $this->validator = $validator = new CrontabValidator();
-
         if (empty($this->files)) {
             return true;
         }
 
+        $success = true;
+
         foreach ($this->files as $fileName) {
             $cronFile = sprintf('%s%s', $this->buildDir, $fileName);
-            printf("%s\n", $cronFile);
-
             if (!$this->validateFile($cronFile)) {
+                $this->build->reportError(
+                    $this->builder,
+                    self::pluginName(),
+                    sprintf('Missing Cron File: %s', $fileName),
+                    BuildError::SEVERITY_NORMAL,
+                    $fileName
+                );
                 continue;
             }
 
-            $cronTab = file_get_contents($cronFile);
+            $lineNo    = 1;
+            $cronTab   = file_get_contents($cronFile);
             $cronLines = explode("\n", $cronTab);
             foreach ($cronLines as $line) {
-                if (!$this->validateLine($line)) {
-                    continue;
+                $errors = $this->validateLine($line);
+                foreach ($errors as $err) {
+                    $this->build->reportError(
+                        $this->builder,
+                        self::pluginName(),
+                        $err,
+                        BuildError::SEVERITY_HIGH,
+                        $fileName,
+                        $lineNo
+                    );
+                    $success = false;
                 }
+                ++$lineNo;
             }
         }
 
-        return true;
+        return $success;
     }
 
     // ------------------------------------------------------------------------
@@ -106,40 +118,74 @@ class CronLint extends Plugin implements ZeroConfigPluginInterface
      */
     protected function validateFile(string $file) : bool
     {
-        if (!file_exists($file)) {
-            $this->build->reportError(
-                $this->builder,
-                self::pluginName(),
-                'Missing Cron File',
-                BuildError::SEVERITY_NORMAL,
-                $fileName
-            );
-
-            return false;
-        }
-
-        return true;
+        return file_exists($file);
     }
 
     /**
      * Validate Cron Line.
      *
      * @param  string $line
-     * @return bool
+     * @return array
      */
-    protected function validateLine(string $line) : bool
+    protected function validateLine(string $line) : array
     {
-        if (!$this->validator->isIntervalValid($line)) {
-            $this->build->reportError(
-                $this->builder,
-                self::pluginName(),
-                sprintf('Invalid expression - %s', $line),
-                BuildError::SEVERITY_HIGH,
-                $fileName
-            );
-            return false;
+        $errors = [];
+
+        // Skip comment lines or empty lines
+        if (empty($line) || substr($line, 0, 1) == '#') {
+            echo "empty/comment line\n";
+            return $errors;
         }
 
-        return true;
+        $line = str_replace("\t", " ", $line);
+        $args = array_values(
+            array_filter(
+                explode(" ", $line),
+                function ($v) {
+                    return (bool) strlen($v);
+                }
+            )
+        );
+        $cmd  = implode(' ', array_slice($args, 5));
+        list($mins, $hours, $dayofmonth, $month, $dayofweek) = array_slice($args, 0, 5);
+
+        $regEx = [
+            'minhour'     => '/^([\*|\d]+)$|^([\*]\/\d+)$|^([\d+]\/\d+?(\-\d+))$|^(\d+-\d+\/[\d]+)$/i',
+            'daymonth'    => '/^(\d|\*)$/i',
+            'month'       => '/^(\d|\*)$/i',
+            'dayweek'     => '/^(\*|\d|[a-z]{3})$/i',
+            'cmdoverflow' => '/^(\d|\*)$/i'
+        ];
+
+        if (!preg_match($regEx['minhour'], $mins)) {
+            $errors[] = sprintf("Minutes invalid value: %s", $mins);
+        }
+        if (!preg_match($regEx['minhour'], $hours)) {
+            $errors[] = sprintf("Hours invalid value: %s", $hours);
+        }
+
+        $offset = 0;
+        $dayofmonth = explode(',', $dayofmonth);
+        foreach ($dayofmonth as $dom) {
+            if (!preg_match($regEx['daymonth'], $dom)) {
+                $errors[] = sprintf("Day of month[%d] invalid value: %s", $offset, $dom);
+            }
+            ++$offset;
+        }
+
+        $offset = 0;
+        $dayofweek = explode(',', $dayofweek);
+        foreach ($dayofweek as $dow) {
+            if (!preg_match($regEx['dayweek'], $dow)) {
+                $errors[] = sprintf("Day of week[%d] invalid value: %s", $offset, $dow);
+            }
+            ++$offset;
+        }
+
+        if (preg_match($regEx['cmdoverflow'], substr($cmd, 0, 1) == '*')) {
+            $errors[] = sprintf("Cmd starts with invalid character: %s", $cmd);
+        }
+
+        return $errors;
     }
 }

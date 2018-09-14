@@ -23,8 +23,7 @@
         }
     ],
     "require": {
-        "php": ">=7.0",
-        "hollodotme/crontab-validator": "^1.0"
+        "php": ">=7.0"
     },
     "autoload": {
         "psr-4": {
