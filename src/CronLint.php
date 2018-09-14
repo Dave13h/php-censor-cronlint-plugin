@@ -133,7 +133,6 @@ class CronLint extends Plugin implements ZeroConfigPluginInterface
 
         // Skip comment lines or empty lines
         if (empty($line) || substr($line, 0, 1) == '#') {
-            echo "empty/comment line\n";
             return $errors;
         }
 
