@@ -156,11 +156,23 @@ class CronLint extends Plugin implements ZeroConfigPluginInterface
             'cmdoverflow' => '/^(\d|\*)$/i'
         ];
 
-        if (!preg_match($regEx['minhour'], $mins)) {
-            $errors[] = sprintf("Minutes invalid value: %s", $mins);
+
+        $offset = 0;
+        $mins = explode(',', $mins);
+        foreach ($mins as $min) {
+            if (!preg_match($regEx['minhour'], $min)) {
+                $errors[] = sprintf("Minute[%d] invalid value: %s", $offset, $min);
+            }
+            ++$offset;
         }
-        if (!preg_match($regEx['minhour'], $hours)) {
-            $errors[] = sprintf("Hours invalid value: %s", $hours);
+
+        $offset = 0;
+        $hours = explode(',', $hours);
+        foreach ($hours as $hour) {
+            if (!preg_match($regEx['minhour'], $hour)) {
+                $errors[] = sprintf("Hour[%d] invalid value: %s", $offset, $hour);
+            }
+            ++$offset;
         }
 
         $offset = 0;
