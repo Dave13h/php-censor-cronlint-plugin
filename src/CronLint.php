@@ -149,7 +149,7 @@ class CronLint extends Plugin implements ZeroConfigPluginInterface
         list($mins, $hours, $dayofmonth, $month, $dayofweek) = array_slice($args, 0, 5);
 
         $regEx = [
-            'minhour'     => '/^([\*|\d])$|^([\*|\d]+?(\-\d+))$|^([\*]\/\d+)$|^([\d+]\/\d+?(\-\d+))$|^(\d+-\d+\/[\d]+)$/i',
+            'minhour'     => '/^([\*|\d]+)$|^([\*|\d]+?(\-\d+))$|^([\*]\/\d+)$|^([\d+]\/\d+?(\-\d+))$|^(\d+-\d+\/[\d]+)$/i',
             'daymonth'    => '/^(\d|\*)$/i',
             'month'       => '/^(\d|\*)$/i',
             'dayweek'     => '/^(\*|\d|[a-z]{3})$/i',
