@@ -52,7 +52,7 @@ class CronLint extends Plugin implements ZeroConfigPluginInterface
     /**
      * {@inheritdoc}
      */
-    public static function canExecute($stage, Builder $builder, Build $build)
+    public static function canExecuteOnStage($stage, Build $build)
     {
         return ($stage == Build::STAGE_TEST);
     }
