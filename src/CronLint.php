@@ -150,8 +150,8 @@ class CronLint extends Plugin implements ZeroConfigPluginInterface
 
         $regEx = [
             'minhour'     => '/^([\*|\d]+)$|^([\*|\d]+?(\-\d+))$|^([\*]\/\d+)$|^([\d+]\/\d+?(\-\d+))$|^(\d+-\d+\/[\d]+)$/i',
-            'daymonth'    => '/^(\d|\*)$/i',
-            'month'       => '/^(\d|\*)$/i',
+            'daymonth'    => '/^(\d{1,2}|\*)$/i',
+            'month'       => '/^(\d{1,2}|\*)$/i',
             'dayweek'     => '/^(\*|\d|[a-z]{3})$/i',
             'cmdoverflow' => '/^(\d|\*)$/i'
         ];
